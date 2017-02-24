@@ -1,0 +1,206 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Example display of external offsets
+-->
+<pyvcp>
+  <vbox>
+     <relief>"ridge"</relief>
+     <bd>5</bd>
+    <label>
+      <text>"X Offset"</text>
+      <font>"bold"</font>
+    </label>
+    <label>
+      <text>"per"</text>
+      <font>"bold"</font>
+    </label>
+    <label>
+      <text>"C Angle"</text>
+      <font>"bold"</font>
+    </label>
+    <vbox>
+      <relief>"sunken"</relief>
+      <bd>3</bd>
+
+      <hbox>
+        <number>
+          <halpin>"x-offset-f"</halpin>
+          <format>"+10.4f"</format>
+          <width>"11"</width>
+          <bg>"black"</bg>
+          <fg>"gold"</fg>
+          <font>"bold"</font>
+        </number>
+      </hbox>
+
+      <hbox>
+        <label>
+          <padx>0</padx>
+          <font>"monospace"</font>
+        </label>
+        <led>
+          <halpin>"eoffset-limited"</halpin>
+            <size>15</size>
+            <on_color>"red"</on_color>
+            <off_color>"#d9d9d9"</off_color>
+        </led>
+        <label>
+          <text>" Offset Limit"</text>
+          <anchor>"w"</anchor>
+        </label>
+      </hbox>
+
+      <hbox>
+        <label>
+          <padx>0</padx>
+          <font>"monospace"</font>
+        </label>
+          <led>
+          <halpin>"eoffset-enable"</halpin>
+           <size>15</size>
+           <on_color>"gold"</on_color>
+           <off_color>"#d9d9d9"</off_color>
+         </led>
+         <label>
+           <text>" OffsetOn"</text>
+           <anchor>"w"</anchor>
+         </label>
+      </hbox>
+
+      <hbox>
+        <label>
+          <padx>0</padx>
+          <font>"monospace"</font>
+        </label>
+          <led>
+          <halpin>"eoffset-active"</halpin>
+           <size>15</size>
+           <on_color>"gold"</on_color>
+           <off_color>"#d9d9d9"</off_color>
+         </led>
+         <label>
+           <text>" OffsetActive"</text>
+           <anchor>"w"</anchor>
+         </label>
+      </hbox>
+
+      <hbox>
+        <label>
+          <padx>0</padx>
+          <font>"monospace"</font>
+        </label>
+          <led>
+          <halpin>"paused"</halpin>
+           <size>15</size>
+           <on_color>"springgreen"</on_color>
+           <off_color>"#d9d9d9"</off_color>
+         </led>
+         <label>
+           <text>" Paused"</text>
+           <anchor>"w"</anchor>
+         </label>
+      </hbox>
+
+      <hbox>
+        <label>
+          <padx>0</padx>
+          <font>"monospace"</font>
+        </label>
+          <led>
+          <halpin>"waveon"</halpin>
+           <size>15</size>
+           <on_color>"cyan"</on_color>
+           <off_color>"#d9d9d9"</off_color>
+         </led>
+         <label>
+           <text>" WaveOn"</text>
+           <anchor>"w"</anchor>
+         </label>
+      </hbox>
+
+      <hbox>
+        <button>
+          <halpin>"wave-start"</halpin>
+          <text>"On"</text>
+          <width>"3"</width>
+          <bd>3</bd>
+        </button>
+        <button>
+          <halpin>"wave-stop"</halpin>
+          <text>"Off"</text>
+          <width>"3"</width>
+          <bd>3</bd>
+        </button>
+      </hbox>
+
+      <hbox>
+        <label>
+          <anchor>"w"</anchor>
+          <text>"fmul:"</text>
+          <font>"bold"</font>
+        </label>
+        <spinbox>
+          <halpin>"fmul"</halpin>
+          <min_>1.0</min_>
+          <max_>20.0</max_>
+          <width>4</width>
+          <initval>6</initval>
+          <resolution>1</resolution>
+          <format>"3.1f"</format>
+          <font>"bold"</font>
+          <param_pin>1</param_pin>
+        </spinbox>
+      </hbox>
+
+      <hbox>
+        <label>
+          <anchor>"w"</anchor>
+          <text>"  rfrac:"</text>
+          <font>"bold"</font>
+        </label>
+        <spinbox>
+          <halpin>"rfrac"</halpin>
+          <min_>-0.9</min_>
+          <max_>0.9</max_>
+          <width>0</width>
+          <initval>0.0</initval>
+          <resolution>.1</resolution>
+          <format>"3.1f"</format>
+          <font>"bold"</font>
+          <param_pin>1</param_pin>
+        </spinbox>
+      </hbox>
+
+      <hbox>
+        <label>
+          <anchor>"w"</anchor>
+          <text>" func:"</text>
+          <font>"bold"</font>
+        </label>
+        <scale>
+          <font>"monospace"</font>
+          <width>"10"</width>
+          <halpin>"func"</halpin>
+          <resolution>1</resolution>
+          <orient>VERTICAL</orient>
+          <initval>0</initval>
+          <min_>0</min_>
+          <max_>2</max_>
+          <param_pin>1</param_pin>
+        </scale>
+      </hbox>
+
+      <hbox>
+        <checkbutton>
+          <anchor>"w"</anchor>
+          <halpin>"syncmode"</halpin>
+          <text>"Syncmode"</text>
+          <initval>0</initval>
+        </checkbutton>
+      </hbox>
+
+
+
+
+    </vbox>
+  </vbox>
+</pyvcp>

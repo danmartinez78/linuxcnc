@@ -1,0 +1,73 @@
+loadrt offset_per_angle names=xo
+loadrt not              names=nota
+loadrt flipflop         names=ff1
+
+addf   xo       servo-thread
+addf   nota     servo-thread
+addf   ff1      servo-thread
+
+setp   xo.k     10000
+setp   xo.func  2
+setp   ff1.data 0
+
+
+net E:wave-start     <= pyvcp.wave-start
+net E:wave-start     => ff1.set
+
+net E:wave-stop      <= pyvcp.wave-stop
+net E:wave-stop      => ff1.clk
+
+net E:is-off         <= nota.out
+net E:is-off         => ff1.reset
+
+net E:wave-enable    <= ff1.out
+net E:wave-enable    => xo.enable-in
+net E:wave-enable    => pyvcp.waveon
+
+net E:is-on          <= halui.machine.is-on
+net E:is-on          => xo.is-on => nota.in
+
+net E:angle          <= axis.c.pos-cmd
+net E:angle          => xo.angle
+
+# this works only if there are no x offsets:
+net E:radius         <= axis.x.pos-cmd
+net E:radius         => xo.radius-in
+
+net E:func           <= pyvcp.func-i
+net E:func           => xo.func
+
+net E:rfrac          <= pyvcp.rfrac
+net E:rfrac          => xo.rfrac
+
+net E:fmul           <= pyvcp.fmul
+net E:fmul           => xo.fmul
+
+net E:syncmode       <= pyvcp.syncmode
+net E:syncmode       => xo.syncmode
+
+net E:current        <= axis.x.eoffset
+net E:current        => pyvcp.x-offset-f
+
+net E:offset-enable  <= xo.enable-out
+net E:offset-enable  => axis.x.eoffset-enable
+net E:offset-enable  => pyvcp.eoffset-enable
+
+net E:clear          <= xo.clear
+net E:clear          => axis.x.eoffset-clear
+
+net E:scale          <= xo.kreciprocal
+net E:scale          => axis.x.eoffset-scale
+
+net E:kcounts        <= xo.kcounts 
+net E:kcounts        => axis.x.eoffset-counts
+
+net E:active         <= motion.eoffset-active
+net E:active         <= xo.active
+net E:active         => pyvcp.eoffset-active
+
+net E:limited        <= motion.eoffset-limited
+net E:limited        => pyvcp.eoffset-limited
+
+net E:paused         <= halui.program.is-paused
+net E:paused         => pyvcp.paused

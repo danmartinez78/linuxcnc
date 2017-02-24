@@ -1,0 +1,236 @@
+component offset_per_angle "Compute Offset Per Angle";
+//" vim
+description
+"""
+
+An offset is computed (from one of several functions) based on
+an input angle in degrees.  The angle could be a rotary
+coordinate value or a spindle angle.
+
+The computed offset is represented as an s32 \\fBkcounts\\fR output
+pin that is a compatible input to external offset pins like
+\\fBaxis.L.eoffset-counts\\fR where \\fBL\\fR is the coordinate
+letter.  Scaling of the s32 \\fBkcounts\\fR is controlled by the
+input (\\fBk\\fR) -- its reciprocal value is presented on an output pin
+(\\fBkcounts\\fR) for connection to \\fBaxis.L.eoffset-counts\\fR.
+The default value for \\fBk\\fR should be suitable for most uses.
+
+The built-in functions use pins \\fBfmult\\fR and \\fBrfrac\\fR
+to control the output frequency (or number of polygon sides)
+and amplitude respectively.  The  \\fBrfrac\\fR pin controls
+the offset amplitude as a fraction of the \\fBradius-in\\fR pin.
+
+Three built-in functions:
+   \\fBf0\\fR polygon
+   \\fBf1\\fR sinusoid
+   \\fBf2\\fR square wave
+
+\\fBNOTES:\\fR
+
+\\fBradius-in\\fR:
+The amplitude of the computed offsets are based on the
+\\fBradius-in\\fR pin value.  This pin may be set to a
+constant radius value.  It can also be connected to a
+coordinate position pin like \\fBaxis.L.pos-cmd\\fR but only
+if there are no position offsets.  When offsets are present,
+they must be accounted for in specifying the radius for
+computation.
+
+\\fBStopping\\fR:
+When the \\fBenable-in\\fR pin is deasserted, the offset is
+returned to zero respecting the allocated acceleration
+and velocity limits.
+
+\\fBEXAMPLE:\\fR
+An example simulation configuration is provided at:
+\\fBconfigs/sim/axis/external_offsets/opa.ini\\fR.  A
+simulated XZC machine uses the \\fBC\\fR coordinate angle to
+offset the transverse \\fBX\\fR coordinate according to
+the selected \\fBfunc\\fR.
+""";
+
+//" quote char for vim highlighting
+
+pin  in   bit enable_in = 0     "Enable Input";
+pin  in   bit is_on     = 0     "From: halui.machine.is-on";
+pin  in float angle     = 0     "Input angle (in degrees)";
+pin  in float radius_in = 1     "Radius for offset (see notes)";
+pin  in   u32 k         = 10000 "Scaling Factor (if 0, use 10000)";
+pin  in   s32 func      = 0     "Function selector (default 0)";
+pin  in float rfrac     = 0.1   "Offset amplitude (+/- r fraction)";
+pin  in float fmul      = 6     "Offset frequency multiplier";
+pin  in   bit syncmode  = 0     "Synchronization 0: sync at current angle";
+pin  in   bit active    = 0     "From motion.eoffset-active (stopping  detection)";
+
+pin out   bit enable_out        "To: axis.L.eoffset-enable";
+pin out   s32 kcounts           "To: axis.L.eoffset-counts";
+pin out float kreciprocal       "To: axis.L.eoffset-scale (1/k)";
+pin out   bit clear             "To: axis.L.eoffset-clear";
+
+pin out float offset            "offset (debug pin (use kcounts for offset)";
+pin out   u32 dstate            "state  (debug pin)";
+
+function _;
+license "GPL";
+;;
+
+#include <rtapi_math.h>
+
+#define TO_RAD  M_PI/180
+#define FINISH_DELAY 100
+
+static int run_ct   = 0;
+static int delay_ct = 0;
+static double start_angle; // syncronize waveform at apply
+static int    kcounts_at_start;
+
+static void func0(double, double, double, double, double*);
+static void func1(double, double, double, double, double*);
+static void func2(double, double, double, double, double*);
+
+typedef enum {
+    OFF,
+    READY,
+    RUNNING,
+    STOPPING,
+    FINISH,
+} state;
+
+#define OPA_DEBUG
+#undef  OPA_DEBUG
+
+#ifdef  OPA_DEBUG
+#include <stdio.h>
+void dprint1(const char* msg) {
+     fprintf(stderr,"kcounts_at_start=%6d %-30s\n"
+            ,kcounts_at_start,msg);
+}
+#else
+void dprint0(const char* msg) { return;}
+void dprint1(const char* msg) { return;}
+#endif
+
+FUNCTION(_) {
+   static state  thestate = OFF;
+   double delta;
+   int    kfactor;
+   void   (*thefunc)(double, double, double, double, double*);
+
+   run_ct++;
+   dstate = thestate;
+   if (k == 0) {kfactor = 10000;}
+   kreciprocal = 1/((float)kfactor);
+
+   if (!is_on) {
+       kcounts    = 0;
+       kcounts_at_start = kcounts;
+       enable_out = 0;
+       offset     = 0;
+       thestate   = OFF;
+       return;
+   }
+   switch (thestate) {
+   case OFF:
+        // wait for enable_in 0-->1 transition
+        if (enable_in) {return;}
+        dprint1("OFF->READY");
+        thestate = READY;
+        break;
+   case READY:
+        if (!enable_in) {return;}
+        kcounts_at_start = kcounts;
+        if (syncmode) {
+            start_angle = 0;
+        } else {
+            start_angle = angle;
+        }
+        offset     = 0;
+        enable_out = 0;
+        delay_ct   = 0;
+        kcounts    = 0;
+        dprint1("READY->RUNNING");
+        thestate   = RUNNING;
+        return;
+        break;
+   case RUNNING:
+        if (!enable_in) {
+            dprint1("RUNNING->STOPPING");
+            kcounts  = kcounts_at_start;
+            offset   = 0;
+            thestate = STOPPING;
+            delay_ct = run_ct;
+            return;
+        } else {
+            enable_out = 1;
+            thestate   = RUNNING;
+        }
+        break;
+   case STOPPING:
+        offset  = 0;
+        clear   = 1;
+        if (!active) {
+            dprint1("STOPPING->FINISH");
+            delay_ct = run_ct;
+            thestate = FINISH;
+        } else {
+            thestate   = STOPPING;
+        }
+        return;
+        break;
+   case FINISH:
+        // delay to further reduce offset before revoking enable_out
+        if (run_ct > (FINISH_DELAY + delay_ct) ) {
+            dprint1("FINISH->READY");
+            enable_out = 0;
+            clear      = 0;
+            thestate   = READY;
+        } else {
+            thestate   = FINISH;
+        }
+        return;
+        break;
+   }
+   delta = 0;
+   switch (func) {
+     case  0: thefunc = func0; break;
+     case  1: thefunc = func1; break;
+     case  2: thefunc = func2; break;
+     default: thefunc = func0; break;
+   }
+   thefunc(angle, radius_in, rfrac, fmul, &delta);
+   kcounts = kfactor * delta;
+   offset  = kcounts * kreciprocal;// debug
+}
+
+static void func0 (double adeg, double r, double rfraction,
+                   double fmultiplier, double* delta)
+{
+   // polygon (fmultiplier > 2)
+   double uangle;
+   if (fmultiplier <= 2) {fmultiplier = 6;} //ignore bad values
+   double del = 360/fmultiplier;
+   uangle  = adeg + del/2 - start_angle;
+   *delta = (1 + rfraction)
+          * r/cos((del/2 - fmod(uangle,del))*TO_RAD) - r;
+}
+
+static void func1 (double adeg, double r, double rfraction,
+                   double fmultiplier, double* delta)
+{
+   // sin() +270 ==> start at zero amplitude
+   adeg = fmultiplier*(adeg - start_angle) + 270;
+   *delta = (rfraction * r)
+          * (1 + sin(adeg * TO_RAD));
+}
+
+static void func2 (double adeg, double r, double rfraction,
+                   double fmultiplier, double* delta)
+{
+   // square() +270 ==> start at zero amplitude
+   // useful for looking at affects of ini settings
+   // max vel/accel and offset_av_ratio
+   double value = -1;
+   adeg = fmultiplier*(adeg) + 270;
+   if (sin(adeg * TO_RAD) >= 0) {value = 1;}
+   *delta = (rfraction * r) * (1 + value);
+}

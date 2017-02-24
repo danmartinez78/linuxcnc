@@ -1,0 +1,33 @@
+opa.ini Offset per Angle
+
+Demonstrates external offsets using the
+hal component: offset_per_angle.
+
+A simulation for an XZC machine offsets
+the transverse (X) coordinate based on
+the rotary coordinate (C) angle.
+
+($ man offset_per_angle for more info)
+
+Usage:
+  1) Estop OFF  (F1)
+  2) Machine ON (F2)
+  3) HOME All   (Ctrl-Home)
+  4) Run        (R)
+  5) Enable/Disabel offsets using pyvcp
+     panel On/Off buttons
+  6) Select parameters:
+       fmul  ----- frequency
+       rfrac ----- amplitude
+       func  ----- function
+                    polygon
+                    sine wave
+                    square wave
+       Syncmode -- synchronize offset angle 
+
+Notes:
+  Offset fidelity is dependent upon inifile
+  settings for [AXIS_X] items:
+     MAX_VELOCITY
+     MAX_ACCELERATION
+     OFFSET_AV_RATIO
